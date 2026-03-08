@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:dotlottie_loader/dotlottie_loader.dart';
+import 'package:lottie/lottie.dart';
 import '../config/theme.dart';
 import '../services/data_service.dart';
 import '../widgets/glow_button.dart';
@@ -17,23 +19,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   final List<_OnboardingPage> _pages = [
     _OnboardingPage(
-      title: 'GlowUp Challenge',
-      description: 'Transform your face and body in 30 days',
-      icon: Icons.auto_awesome_rounded,
-      gradient: [AppColors.primary, AppColors.primaryDark],
+      title: 'Consistency is the Key',
+      subtitle: "Don't Give Up",
+      animation: 'assets/animation/onboarding1.lottie',
     ),
     _OnboardingPage(
-      title: 'Daily 20 Minute Routine',
-      description:
-          'Follow guided exercises with timers and voice guidance',
-      icon: Icons.timer_rounded,
-      gradient: [AppColors.secondary, AppColors.secondaryDark],
+      title: 'What You Eat Matters',
+      subtitle: 'Eat Healthy',
+      animation: 'assets/animation/onboarding2.lottie',
     ),
     _OnboardingPage(
       title: 'Track Your Progress',
-      description: 'Build streaks and see your transformation',
-      icon: Icons.trending_up_rounded,
-      gradient: [AppColors.primary, const Color(0xFFFF6F00)],
+      subtitle: 'Never Skip',
+      animation: 'assets/animation/onboarding3.lottie',
     ),
   ];
 
@@ -73,6 +71,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: Column(
           children: [
@@ -88,9 +87,24 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 },
               ),
             ),
+            // Disclaimer
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: Text(
+                'Individual results may differ based on personal health, lifestyle, and consistency.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.grey.shade500,
+                  fontSize: 11,
+                  fontStyle: FontStyle.italic,
+                  height: 1.4,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
             // Dots indicator
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 20),
+              padding: const EdgeInsets.symmetric(vertical: 16),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: List.generate(
@@ -102,8 +116,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     height: 10,
                     decoration: BoxDecoration(
                       color: _currentPage == index
-                          ? AppColors.secondary
-                          : context.appTextHint,
+                          ? AppColors.primary
+                          : Colors.grey.shade300,
                       borderRadius: BorderRadius.circular(5),
                     ),
                   ),
@@ -130,73 +144,163 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Widget _buildPage(_OnboardingPage page) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 32),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // Illustration container
-          Container(
-            width: 200,
-            height: 200,
+    return Stack(
+      children: [
+        // Decorative circles
+        // Large red circle - top right
+        Positioned(
+          top: -40,
+          right: -50,
+          child: Container(
+            width: 160,
+            height: 160,
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: page.gradient,
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
               shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: page.gradient.first.withAlpha(60),
-                  blurRadius: 40,
-                  spreadRadius: 10,
+              color: AppColors.primary.withAlpha(20),
+            ),
+          ),
+        ),
+        // Small secondary circle - top left
+        Positioned(
+          top: 60,
+          left: 20,
+          child: Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppColors.secondary.withAlpha(45),
+            ),
+          ),
+        ),
+        // Medium red circle - mid left
+        Positioned(
+          top: 200,
+          left: -30,
+          child: Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppColors.primary.withAlpha(15),
+            ),
+          ),
+        ),
+        // Small red circle - right side
+        Positioned(
+          bottom: 180,
+          right: 30,
+          child: Container(
+            width: 24,
+            height: 24,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppColors.primary.withAlpha(30),
+            ),
+          ),
+        ),
+        // Large secondary circle - bottom left
+        Positioned(
+          bottom: 40,
+          left: -40,
+          child: Container(
+            width: 120,
+            height: 120,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppColors.secondary.withAlpha(25),
+            ),
+          ),
+        ),
+        // Small secondary circle - bottom right
+        Positioned(
+          bottom: 100,
+          right: -15,
+          child: Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppColors.secondary.withAlpha(35),
+            ),
+          ),
+        ),
+        // Medium red circle - top center
+        Positioned(
+          top: 10,
+          left: 140,
+          child: Container(
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppColors.primary.withAlpha(25),
+            ),
+          ),
+        ),
+        // Content
+        Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Animation
+                SizedBox(
+                  width: 320,
+                  height: 320,
+                  child: DotLottieLoader.fromAsset(
+                    page.animation,
+                    frameBuilder: (ctx, dotlottie) {
+                      if (dotlottie != null) {
+                        return Lottie.memory(
+                          dotlottie.animations.values.single,
+                          fit: BoxFit.contain,
+                        );
+                      }
+                      return const SizedBox.shrink();
+                    },
+                  ),
                 ),
+                const SizedBox(height: 40),
+                Text(
+                  page.title,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Color(0xFF1A1A1A),
+                    fontSize: 32,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  page.subtitle,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                  color: Colors.grey.shade600,
+                  fontSize: 19,
+                  fontWeight: FontWeight.w500,
+                  height: 1.5,
+                ),
+              ),
               ],
             ),
-            child: Icon(
-              page.icon,
-              size: 80,
-              color: Colors.white,
-            ),
           ),
-          const SizedBox(height: 48),
-          Text(
-            page.title,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: context.appTextPrimary,
-              fontSize: 28,
-              fontWeight: FontWeight.w800,
-              letterSpacing: -0.5,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            page.description,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: context.appTextSecondary,
-              fontSize: 16,
-              height: 1.5,
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
 
 class _OnboardingPage {
   final String title;
-  final String description;
-  final IconData icon;
-  final List<Color> gradient;
+  final String subtitle;
+  final String animation;
 
   _OnboardingPage({
     required this.title,
-    required this.description,
-    required this.icon,
-    required this.gradient,
+    required this.subtitle,
+    required this.animation,
   });
 }
