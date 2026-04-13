@@ -4,7 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 class AppColors {
   static const Color primary = Color(0xFFE53935); // Red
   static const Color primaryDark = Color(0xFFB71C1C);
-  static const Color secondary = Color(0xFFBDEB3E); // Lime green
+  static const Color secondary = Color(0xFFFFD60A); // Yellow accent
   static const Color secondaryDark = Color(0xFF9BC22A);
   static const Color background = Color(0xFF121212);
   static const Color surface = Color(0xFF1E1E1E);
@@ -28,9 +28,7 @@ class AppTheme {
         secondary: AppColors.secondary,
         surface: AppColors.surface,
       ),
-      textTheme: GoogleFonts.poppinsTextTheme(
-        ThemeData.dark().textTheme,
-      ),
+      textTheme: GoogleFonts.poppinsTextTheme(ThemeData.dark().textTheme),
       appBarTheme: AppBarTheme(
         backgroundColor: AppColors.secondary,
         elevation: 0,
@@ -65,9 +63,7 @@ class AppTheme {
       cardTheme: CardThemeData(
         color: AppColors.cardDark,
         elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       ),
       dividerColor: AppColors.divider,
       hintColor: AppColors.textHint,
@@ -84,9 +80,7 @@ class AppTheme {
         secondary: AppColors.secondary,
         surface: AppColorsLight.surface,
       ),
-      textTheme: GoogleFonts.poppinsTextTheme(
-        ThemeData.light().textTheme,
-      ),
+      textTheme: GoogleFonts.poppinsTextTheme(ThemeData.light().textTheme),
       appBarTheme: AppBarTheme(
         backgroundColor: AppColors.secondary,
         elevation: 0,
@@ -122,9 +116,7 @@ class AppTheme {
         color: AppColorsLight.cardDark,
         elevation: 1,
         shadowColor: Colors.black.withAlpha(25),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       ),
       dividerColor: AppColorsLight.divider,
       hintColor: AppColorsLight.textHint,
@@ -144,11 +136,16 @@ class AppColorsLight {
 
 extension AppThemeColors on BuildContext {
   bool get isDark => Theme.of(this).brightness == Brightness.dark;
-  Color get appCardColor => isDark ? AppColors.cardDark : AppColorsLight.cardDark;
-  Color get appTextPrimary => isDark ? AppColors.textPrimary : AppColorsLight.textPrimary;
-  Color get appTextSecondary => isDark ? AppColors.textSecondary : AppColorsLight.textSecondary;
-  Color get appTextHint => isDark ? AppColors.textHint : AppColorsLight.textHint;
+  Color get appCardColor =>
+      isDark ? AppColors.cardDark : AppColorsLight.cardDark;
+  Color get appTextPrimary =>
+      isDark ? AppColors.textPrimary : AppColorsLight.textPrimary;
+  Color get appTextSecondary =>
+      isDark ? AppColors.textSecondary : AppColorsLight.textSecondary;
+  Color get appTextHint =>
+      isDark ? AppColors.textHint : AppColorsLight.textHint;
   Color get appDivider => isDark ? AppColors.divider : AppColorsLight.divider;
   Color get appSurface => isDark ? AppColors.surface : AppColorsLight.surface;
-  Color get appBackground => isDark ? AppColors.background : AppColorsLight.background;
+  Color get appBackground =>
+      isDark ? AppColors.background : AppColorsLight.background;
 }

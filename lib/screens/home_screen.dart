@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../config/theme.dart';
 import '../services/data_service.dart';
 import '../widgets/progress_card.dart';
@@ -149,57 +150,35 @@ class _HomeScreenState extends State<HomeScreen> {
                           Text(
                             _getGreeting(),
                             style: TextStyle(
-                              color: Colors.black.withAlpha(150),
+                              color: Colors.black.withAlpha(180),
                               fontSize: 13,
-                              fontWeight: FontWeight.w500,
+                              fontWeight: FontWeight.w600,
                               letterSpacing: 0.3,
                             ),
                           ),
-                          const SizedBox(height: 3),
-                          Row(
-                            children: [
-                              Text(
-                                'Glow',
-                                style: TextStyle(
-                                  color: AppColors.primary,
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: -0.8,
-                                ),
-                              ),
-                              const Text(
-                                'Up',
-                                style: TextStyle(
-                                  color: Colors.black,
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: -0.8,
-                                ),
-                              ),
-                              const Text(
-                                ' Challenge',
-                                style: TextStyle(
-                                  color: Colors.black,
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: -0.3,
-                                ),
-                              ),
-                            ],
+                          const SizedBox(height: 4),
+                          Text(
+                            'GlowUp-Challenge',
+                            style: GoogleFonts.poppins(
+                              color: Colors.white,
+                              fontSize: 25,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.3,
+                            ),
                           ),
                         ],
                       ),
                     ),
                     Container(
                       decoration: BoxDecoration(
-                        color: Colors.black.withAlpha(15),
+                        color: Colors.white.withAlpha(120),
                         borderRadius: BorderRadius.circular(14),
                       ),
                       child: IconButton(
                         onPressed: () {},
                         icon: const Icon(
                           Icons.notifications_none_rounded,
-                          color: Colors.black,
+                          color: AppColors.primary,
                           size: 24,
                         ),
                       ),
@@ -216,11 +195,32 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 10),
               // Decorative lines below card
-              Container(width: 50, height: 3, decoration: BoxDecoration(color: Colors.white.withAlpha(180), borderRadius: BorderRadius.circular(2))),
+              Container(
+                width: 50,
+                height: 3,
+                decoration: BoxDecoration(
+                  color: Colors.white.withAlpha(180),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
               const SizedBox(height: 5),
-              Container(width: 34, height: 3, decoration: BoxDecoration(color: Colors.white.withAlpha(120), borderRadius: BorderRadius.circular(2))),
+              Container(
+                width: 34,
+                height: 3,
+                decoration: BoxDecoration(
+                  color: Colors.white.withAlpha(120),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
               const SizedBox(height: 5),
-              Container(width: 20, height: 3, decoration: BoxDecoration(color: Colors.white.withAlpha(70), borderRadius: BorderRadius.circular(2))),
+              Container(
+                width: 20,
+                height: 3,
+                decoration: BoxDecoration(
+                  color: Colors.white.withAlpha(70),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
             ],
           ),
         ),
@@ -264,108 +264,114 @@ class _HomeScreenState extends State<HomeScreen> {
             // ── Card content on the left ──
             Padding(
               padding: const EdgeInsets.all(22),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Phase tags
-                Row(
-                  children: [
-                    Container(
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withAlpha(40),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        'Day $currentDay of 30',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    if (dayPlan != null)
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Phase tags
+                  Row(
+                    children: [
                       Container(
-                        padding:
-                            const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
-                          color: AppColors.secondary.withAlpha(50),
+                          color: Colors.white.withAlpha(40),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          dayPlan.phaseLabel,
+                          'Day $currentDay of 30',
                           style: const TextStyle(
-                            color: AppColors.secondary,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
-                  ],
-                ),
-                const SizedBox(height: 18),
-                const Text(
-                  'Ready to\nGlow?',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 28,
-                    fontWeight: FontWeight.w800,
-                    height: 1.15,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  dayPlan != null
-                      ? '${dayPlan.totalExercises} exercises • ~18 min'
-                      : 'Challenge complete!',
-                  style: TextStyle(
-                    color: Colors.white.withAlpha(200),
-                    fontSize: 14,
-                  ),
-                ),
-                const SizedBox(height: 18),
-                SizedBox(
-                  height: 48,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => WorkoutScreen(day: currentDay),
-                        ),
-                      ).then((_) => setState(() {}));
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: AppColors.primary,
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.play_arrow_rounded, size: 22),
-                        SizedBox(width: 6),
-                        Text(
-                          "Start Workout",
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
+                      const SizedBox(width: 8),
+                      if (dayPlan != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.secondary.withAlpha(50),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            dayPlan.phaseLabel,
+                            style: const TextStyle(
+                              color: AppColors.secondary,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                         ),
-                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+                  const Text(
+                    'Ready to\nGlow?',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 28,
+                      fontWeight: FontWeight.w800,
+                      height: 1.15,
                     ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 8),
+                  Text(
+                    dayPlan != null
+                        ? '${dayPlan.totalExercises} exercises • ~18 min'
+                        : 'Challenge complete!',
+                    style: TextStyle(
+                      color: Colors.white.withAlpha(200),
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  SizedBox(
+                    height: 48,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(context)
+                            .push(
+                              MaterialPageRoute(
+                                builder: (_) => WorkoutScreen(day: currentDay),
+                              ),
+                            )
+                            .then((_) => setState(() {}));
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: AppColors.primary,
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.play_arrow_rounded, size: 22),
+                          SizedBox(width: 6),
+                          Text(
+                            "Start Workout",
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
       ),
     );
   }
@@ -388,9 +394,7 @@ class _HomeScreenState extends State<HomeScreen> {
             TextButton(
               onPressed: () {
                 Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const DayPlanScreen(),
-                  ),
+                  MaterialPageRoute(builder: (_) => const DayPlanScreen()),
                 );
               },
               child: const Text(
@@ -404,20 +408,36 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         const SizedBox(height: 8),
-        _buildPhaseCard('Phase 1: Light', 'Day 1–10', Icons.spa_rounded,
-            AppColors.success),
+        _buildPhaseCard(
+          'Phase 1: Light',
+          'Day 1–10',
+          Icons.spa_rounded,
+          AppColors.success,
+        ),
         const SizedBox(height: 10),
-        _buildPhaseCard('Phase 2: Medium', 'Day 11–20',
-            Icons.fitness_center_rounded, AppColors.warning),
+        _buildPhaseCard(
+          'Phase 2: Medium',
+          'Day 11–20',
+          Icons.fitness_center_rounded,
+          AppColors.warning,
+        ),
         const SizedBox(height: 10),
-        _buildPhaseCard('Phase 3: Advanced', 'Day 21–30',
-            Icons.whatshot_rounded, AppColors.primary),
+        _buildPhaseCard(
+          'Phase 3: Advanced',
+          'Day 21–30',
+          Icons.whatshot_rounded,
+          AppColors.primary,
+        ),
       ],
     );
   }
 
   Widget _buildPhaseCard(
-      String title, String subtitle, IconData icon, Color color) {
+    String title,
+    String subtitle,
+    IconData icon,
+    Color color,
+  ) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -459,10 +479,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
           ),
-          Icon(
-            Icons.chevron_right_rounded,
-            color: context.appTextHint,
-          ),
+          Icon(Icons.chevron_right_rounded, color: context.appTextHint),
         ],
       ),
     );
@@ -470,8 +487,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String _getGreeting() {
     final hour = DateTime.now().hour;
-    if (hour < 12) return 'Good Morning 👋';
-    if (hour < 17) return 'Good Afternoon 👋';
-    return 'Good Evening 👋';
+    if (hour < 12) return 'Good Morning ';
+    if (hour < 17) return 'Good Afternoon ';
+    return 'Good Evening ';
   }
 }

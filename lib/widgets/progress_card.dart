@@ -52,17 +52,13 @@ class ProgressCard extends StatelessWidget {
               value: progress,
               minHeight: 12,
               backgroundColor: context.appSurface,
-              valueColor:
-                  const AlwaysStoppedAnimation<Color>(AppColors.secondary),
+              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.secondary),
             ),
           ),
           const SizedBox(height: 10),
           Text(
             '${(progress * 100).toStringAsFixed(0)}% Complete',
-            style: TextStyle(
-              color: context.appTextSecondary,
-              fontSize: 13,
-            ),
+            style: TextStyle(color: context.appTextSecondary, fontSize: 13),
           ),
         ],
       ),

@@ -1,9 +1,12 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../config/theme.dart';
 import '../models/exercise.dart';
 import '../services/data_service.dart';
-import '../widgets/animation_placeholder.dart';
+import '../services/exercise_rep_counter.dart';
+import '../widgets/exercise_camera_tracker.dart';
+import '../services/voice_coach_service.dart';
 import 'workout_complete_screen.dart';
 
 class WorkoutScreen extends StatefulWidget {
@@ -15,9 +18,9 @@ class WorkoutScreen extends StatefulWidget {
   State<WorkoutScreen> createState() => _WorkoutScreenState();
 }
 
-class _WorkoutScreenState extends State<WorkoutScreen>
-    with TickerProviderStateMixin {
+class _WorkoutScreenState extends State<WorkoutScreen> {
   final DataService _dataService = DataService();
+  final VoiceCoachService _voiceCoach = VoiceCoachService();
   late List<Exercise> _exercises;
   late int _restBetween;
   int _currentIndex = 0;
@@ -26,7 +29,14 @@ class _WorkoutScreenState extends State<WorkoutScreen>
   bool _isResting = false;
   bool _isPaused = false;
   bool _isStarted = false;
-  late AnimationController _progressController;
+  bool _isExerciseTransitioning = false;
+
+  String _currentExercise = '';
+  int _repCount = 0;
+  bool _isRepInProgress = false;
+  String _previousState = 'idle';
+  int _holdSeconds = 0;
+  String _formStatus = 'Adjust posture';
 
   @override
   void initState() {
@@ -34,25 +44,25 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     _exercises = _dataService.getExercisesForDayWithReps(widget.day);
     final plan = _dataService.getDayPlan(widget.day);
     _restBetween = plan?.restBetween ?? 15;
-    _progressController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 1),
-    );
+    if (_exercises.isNotEmpty) {
+      _prepareExerciseState(_exercises.first);
+    }
   }
 
   @override
   void dispose() {
     _timer?.cancel();
-    _progressController.dispose();
+    _voiceCoach.stop();
     super.dispose();
   }
 
   void _startWorkout() {
     setState(() {
       _isStarted = true;
-      _timeRemaining = _exercises[_currentIndex].duration;
+      _isResting = false;
+      _isPaused = false;
+      _prepareExerciseState(_exercises[_currentIndex]);
     });
-    _startTimer();
   }
 
   void _startTimer() {
@@ -66,8 +76,8 @@ class _WorkoutScreenState extends State<WorkoutScreen>
             _timer?.cancel();
             if (_isResting) {
               _isResting = false;
-              _timeRemaining = _exercises[_currentIndex].duration;
-              _startTimer();
+              _isPaused = false;
+              _prepareExerciseState(_exercises[_currentIndex]);
             } else {
               _onExerciseComplete();
             }
@@ -78,16 +88,20 @@ class _WorkoutScreenState extends State<WorkoutScreen>
   }
 
   void _onExerciseComplete() {
+    if (_isExerciseTransitioning) return;
+    _isExerciseTransitioning = true;
     if (_currentIndex < _exercises.length - 1) {
       setState(() {
         _currentIndex++;
         _isResting = true;
+        _isPaused = false;
         _timeRemaining = _restBetween;
       });
       _startTimer();
     } else {
       _completeWorkout();
     }
+    _isExerciseTransitioning = false;
   }
 
   void _nextExercise() {
@@ -96,9 +110,9 @@ class _WorkoutScreenState extends State<WorkoutScreen>
       setState(() {
         _currentIndex++;
         _isResting = false;
-        _timeRemaining = _exercises[_currentIndex].duration;
+        _isPaused = false;
+        _prepareExerciseState(_exercises[_currentIndex]);
       });
-      _startTimer();
     } else {
       _completeWorkout();
     }
@@ -108,6 +122,51 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     setState(() {
       _isPaused = !_isPaused;
     });
+  }
+
+  void _prepareExerciseState(Exercise exercise) {
+    _currentExercise = exercise.name;
+    _repCount = 0;
+    _isRepInProgress = false;
+    _previousState = 'idle';
+    _holdSeconds = 0;
+    _formStatus = 'Adjust posture';
+    
+    // Announce the new exercise and its voice instructions
+    _voiceCoach.speakInstruction("${exercise.name}. ${exercise.voiceInstruction}");
+  }
+
+  void _onTrackingSnapshot(TrackingSnapshot snapshot, Exercise exercise) {
+    if (!mounted || _isResting) return;
+
+    final repIncreased = snapshot.repCount > _repCount;
+
+    setState(() {
+      _currentExercise = snapshot.currentExercise;
+      _repCount = snapshot.repCount;
+      _isRepInProgress = snapshot.isRepInProgress;
+      _previousState = snapshot.previousState;
+      _holdSeconds = snapshot.holdSeconds;
+      
+      if (repIncreased) {
+        SystemSound.play(SystemSoundType.click);
+        _voiceCoach.speakInstruction(snapshot.repCount.toString());
+      } else if (_formStatus != snapshot.statusText && snapshot.statusText != 'Tracking' && snapshot.statusText != 'Adjust posture' && snapshot.statusText != 'Good rep') {
+        _voiceCoach.giveFeedback(snapshot.statusText);
+      }
+      
+      _formStatus = snapshot.statusText;
+    });
+
+    final isMewing = snapshot.currentExercise.toLowerCase().contains('mewing');
+    
+    final targetReached = snapshot.isHoldExercise
+        ? snapshot.holdSeconds >= (isMewing ? 60 : exercise.duration)
+        : snapshot.repCount >= exercise.reps;
+
+    if (targetReached) {
+      _onExerciseComplete();
+    }
   }
 
   void _completeWorkout() async {
@@ -132,10 +191,6 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     }
 
     final exercise = _exercises[_currentIndex];
-    final totalDuration = _isResting ? _restBetween : exercise.duration;
-    final progressValue =
-        totalDuration > 0 ? _timeRemaining / totalDuration : 0.0;
-
     return Scaffold(
       appBar: AppBar(
         title: Text('Day ${widget.day}'),
@@ -162,8 +217,8 @@ class _WorkoutScreenState extends State<WorkoutScreen>
       body: !_isStarted
           ? _buildStartView(exercise)
           : _isResting
-              ? _buildRestView()
-              : _buildExerciseView(exercise, progressValue),
+          ? _buildRestView()
+          : _buildExerciseView(exercise),
     );
   }
 
@@ -179,10 +234,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
               height: 120,
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [
-                    AppColors.primary,
-                    AppColors.primary.withAlpha(180),
-                  ],
+                  colors: [AppColors.primary, AppColors.primary.withAlpha(180)],
                 ),
                 shape: BoxShape.circle,
                 boxShadow: [
@@ -210,10 +262,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
             const SizedBox(height: 8),
             Text(
               '${_exercises.length} exercises • ~18 min',
-              style: TextStyle(
-                color: context.appTextSecondary,
-                fontSize: 15,
-              ),
+              style: TextStyle(color: context.appTextSecondary, fontSize: 15),
             ),
             const SizedBox(height: 24),
             // Exercise list preview
@@ -225,7 +274,9 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                   return Container(
                     margin: const EdgeInsets.only(bottom: 8),
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                     decoration: BoxDecoration(
                       color: context.appCardColor,
                       borderRadius: BorderRadius.circular(12),
@@ -305,99 +356,169 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     );
   }
 
-  Widget _buildExerciseView(Exercise exercise, double progressValue) {
+  Widget _buildExerciseView(Exercise exercise) {
     return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
-        child: Column(
-          children: [
-            const SizedBox(height: 8),
-            // Exercise progress
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
-                value: (_currentIndex + 1) / _exercises.length,
-                minHeight: 4,
-                backgroundColor: context.appSurface,
-                valueColor:
-                    const AlwaysStoppedAnimation<Color>(AppColors.secondary),
-              ),
-            ),
-            const SizedBox(height: 20),
-            // Exercise category label
-            Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-              decoration: BoxDecoration(
-                color: exercise.category == 'face'
-                    ? AppColors.secondary.withAlpha(30)
-                    : AppColors.primary.withAlpha(30),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    exercise.category == 'face'
-                        ? Icons.face_retouching_natural_rounded
-                        : Icons.fitness_center_rounded,
-                    size: 16,
-                    color: exercise.category == 'face'
-                        ? AppColors.secondary
-                        : AppColors.primary,
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    exercise.category == 'face'
-                        ? 'Face Exercise'
-                        : 'Body Exercise',
-                    style: TextStyle(
-                      color: exercise.category == 'face'
-                          ? AppColors.secondary
-                          : AppColors.primary,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
+      child: LayoutBuilder(
+        builder: (context, constraints) => SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: Column(
+              children: [
+                const SizedBox(height: 8),
+                // Exercise progress
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: (_currentIndex + 1) / _exercises.length,
+                    minHeight: 4,
+                    backgroundColor: context.appSurface,
+                    valueColor: const AlwaysStoppedAnimation<Color>(
+                      AppColors.secondary,
                     ),
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            // Exercise name
-            Text(
-              exercise.name,
-              style: TextStyle(
-                color: context.appTextPrimary,
-                fontSize: 28,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              exercise.description,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: context.appTextSecondary,
-                fontSize: 14,
-                height: 1.5,
-              ),
-            ),
-            const SizedBox(height: 20),
+                ),
+                const SizedBox(height: 20),
+                // Exercise category label
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: exercise.category == 'face'
+                        ? AppColors.secondary.withAlpha(30)
+                        : AppColors.primary.withAlpha(30),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        exercise.category == 'face'
+                            ? Icons.face_retouching_natural_rounded
+                            : Icons.fitness_center_rounded,
+                        size: 16,
+                        color: exercise.category == 'face'
+                            ? AppColors.secondary
+                            : AppColors.primary,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        exercise.category == 'face'
+                            ? 'Face Exercise'
+                            : 'Body Exercise',
+                        style: TextStyle(
+                          color: exercise.category == 'face'
+                              ? AppColors.secondary
+                              : AppColors.primary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                // Exercise name
+                Text(
+                  exercise.name,
+                  style: TextStyle(
+                    color: context.appTextPrimary,
+                    fontSize: 28,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  exercise.description,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: context.appTextSecondary,
+                    fontSize: 14,
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 20),
 
-            // Animation placeholder
-            const AnimationPlaceholder(height: 200),
-            const SizedBox(height: 24),
+                // Live camera-based tracking (replaces placeholder)
+                ExerciseCameraTracker(
+                  exercise: exercise,
+                  isPaused: _isPaused,
+                  onSnapshot: (snapshot) =>
+                      _onTrackingSnapshot(snapshot, exercise),
+                ),
+                const SizedBox(height: 24),
 
-            // Timer
-            _buildTimer(progressValue),
-            const Spacer(),
+                _buildRepStatus(exercise),
+                const SizedBox(height: 20),
 
-            // Controls
-            _buildControls(),
-            const SizedBox(height: 24),
-          ],
+                // Controls
+                _buildControls(),
+                const SizedBox(height: 24),
+              ],
+            ),
+          ),
         ),
       ),
+    );
+  }
+
+  Widget _buildRepStatus(Exercise exercise) {
+    final isHold =
+        exercise.name.toLowerCase() == 'plank' ||
+        exercise.name.toLowerCase() == 'wall sit' ||
+        exercise.name.toLowerCase().contains('mewing');
+        
+    final isMewing = exercise.name.toLowerCase().contains('mewing');
+
+    final mainValue = isHold ? '$_holdSeconds s' : '$_repCount';
+    final targetText = isHold
+        ? 'Target: ${isMewing ? 60 : exercise.duration}s'
+        : 'Target: ${exercise.reps} reps';
+
+    return Column(
+      children: [
+        Text(
+          mainValue,
+          style: TextStyle(
+            color: context.appTextPrimary,
+            fontSize: 42,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          targetText,
+          style: TextStyle(
+            color: context.appTextSecondary,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          _formStatus,
+          style: TextStyle(
+            color: _formStatus == 'Good form'
+                ? AppColors.success
+                : AppColors.warning,
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          _isRepInProgress
+              ? 'Phase: $_previousState'
+              : 'Tracking: $_currentExercise',
+          style: TextStyle(
+            color: context.appTextHint,
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
     );
   }
 
@@ -431,10 +552,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
             const SizedBox(height: 8),
             Text(
               'Next: ${_exercises[_currentIndex].name}',
-              style: TextStyle(
-                color: context.appTextSecondary,
-                fontSize: 16,
-              ),
+              style: TextStyle(color: context.appTextSecondary, fontSize: 16),
             ),
             const SizedBox(height: 32),
             Text(
@@ -448,10 +566,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
             const SizedBox(height: 8),
             const Text(
               'seconds',
-              style: TextStyle(
-                color: AppColors.textHint,
-                fontSize: 16,
-              ),
+              style: TextStyle(color: AppColors.textHint, fontSize: 16),
             ),
             const SizedBox(height: 40),
             TextButton.icon(
@@ -472,64 +587,6 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     );
   }
 
-  Widget _buildTimer(double progressValue) {
-    return Column(
-      children: [
-        SizedBox(
-          width: 140,
-          height: 140,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              SizedBox(
-                width: 140,
-                height: 140,
-                child: CircularProgressIndicator(
-                  value: progressValue,
-                  strokeWidth: 8,
-                  backgroundColor: context.appSurface,
-                  valueColor:
-                      const AlwaysStoppedAnimation<Color>(AppColors.primary),
-                  strokeCap: StrokeCap.round,
-                ),
-              ),
-              Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    '$_timeRemaining',
-                    style: TextStyle(
-                      color: context.appTextPrimary,
-                      fontSize: 42,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  Text(
-                    'sec',
-                    style: TextStyle(
-                      color: context.appTextHint,
-                      fontSize: 14,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
-        if (_exercises[_currentIndex].reps > 1)
-          Text(
-            '${_exercises[_currentIndex].reps} reps',
-            style: TextStyle(
-              color: context.appTextSecondary,
-              fontSize: 15,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-      ],
-    );
-  }
-
   Widget _buildControls() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -540,13 +597,8 @@ class _WorkoutScreenState extends State<WorkoutScreen>
           'Voice',
           AppColors.secondary,
           () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Voice instructions coming soon!'),
-                behavior: SnackBarBehavior.floating,
-                duration: Duration(seconds: 1),
-              ),
-            );
+            final ex = _exercises[_currentIndex];
+            _voiceCoach.speakInstruction(ex.voiceInstruction);
           },
         ),
         // Pause/Resume button
@@ -584,7 +636,11 @@ class _WorkoutScreenState extends State<WorkoutScreen>
   }
 
   Widget _controlButton(
-      IconData icon, String label, Color color, VoidCallback onTap) {
+    IconData icon,
+    String label,
+    Color color,
+    VoidCallback onTap,
+  ) {
     return GestureDetector(
       onTap: onTap,
       child: Column(
@@ -618,9 +674,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: context.appCardColor,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(
           'Quit Workout?',
           style: TextStyle(color: context.appTextPrimary),
@@ -632,16 +686,20 @@ class _WorkoutScreenState extends State<WorkoutScreen>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Continue',
-                style: TextStyle(color: AppColors.secondary)),
+            child: const Text(
+              'Continue',
+              style: TextStyle(color: AppColors.secondary),
+            ),
           ),
           TextButton(
             onPressed: () {
               Navigator.pop(context);
               Navigator.pop(context);
             },
-            child: const Text('Quit',
-                style: TextStyle(color: AppColors.primary)),
+            child: const Text(
+              'Quit',
+              style: TextStyle(color: AppColors.primary),
+            ),
           ),
         ],
       ),

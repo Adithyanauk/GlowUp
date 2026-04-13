@@ -24,8 +24,11 @@ class CalendarView extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.calendar_month_rounded,
-                  color: AppColors.secondary, size: 22),
+              const Icon(
+                Icons.calendar_month_rounded,
+                color: AppColors.secondary,
+                size: 22,
+              ),
               const SizedBox(width: 8),
               Text(
                 '30 Day Calendar',
@@ -58,8 +61,8 @@ class CalendarView extends StatelessWidget {
                   color: isCompleted
                       ? AppColors.secondary
                       : isCurrent
-                          ? AppColors.secondary.withAlpha(40)
-                          : context.appSurface,
+                      ? AppColors.secondary.withAlpha(40)
+                      : context.appSurface,
                   borderRadius: BorderRadius.circular(10),
                   border: isCurrent
                       ? Border.all(color: AppColors.secondary, width: 2)
@@ -67,8 +70,11 @@ class CalendarView extends StatelessWidget {
                 ),
                 child: Center(
                   child: isCompleted
-                      ? const Icon(Icons.check_rounded,
-                          color: Colors.white, size: 18)
+                      ? const Icon(
+                          Icons.check_rounded,
+                          color: Colors.white,
+                          size: 18,
+                        )
                       : Text(
                           '$day',
                           style: TextStyle(
@@ -114,10 +120,7 @@ class CalendarView extends StatelessWidget {
         const SizedBox(width: 6),
         Text(
           label,
-          style: TextStyle(
-            color: context.appTextSecondary,
-            fontSize: 12,
-          ),
+          style: TextStyle(color: context.appTextSecondary, fontSize: 12),
         ),
       ],
     );
