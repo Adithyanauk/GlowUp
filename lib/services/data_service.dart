@@ -142,6 +142,25 @@ class DataService {
     await _prefs?.setBool('personalization_complete', true);
   }
 
+  // --- Auth state ---
+
+  bool get hasSkippedAuth => _prefs?.getBool('auth_skipped') ?? false;
+
+  Future<void> setAuthSkipped() async {
+    await _prefs?.setBool('auth_skipped', true);
+  }
+
+  bool get hasCompletedAuth => _prefs?.getBool('auth_complete') ?? false;
+
+  Future<void> setAuthComplete() async {
+    await _prefs?.setBool('auth_complete', true);
+  }
+
+  Future<void> clearAuthState() async {
+    await _prefs?.remove('auth_skipped');
+    await _prefs?.remove('auth_complete');
+  }
+
   int get baseReps {
     switch (fitnessLevel) {
       case 'beginner':

@@ -1,12 +1,28 @@
 import 'package:flutter/material.dart';
 import '../config/theme.dart';
 import '../services/data_service.dart';
+import '../services/ad_service.dart';
+import '../widgets/banner_ad_widget.dart';
 import 'main_shell.dart';
 
-class WorkoutCompleteScreen extends StatelessWidget {
+class WorkoutCompleteScreen extends StatefulWidget {
   final int day;
 
   const WorkoutCompleteScreen({super.key, required this.day});
+
+  @override
+  State<WorkoutCompleteScreen> createState() => _WorkoutCompleteScreenState();
+}
+
+class _WorkoutCompleteScreenState extends State<WorkoutCompleteScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Show interstitial ad after workout completion
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      AdService().showInterstitialAd();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -14,6 +30,7 @@ class WorkoutCompleteScreen extends StatelessWidget {
     final streak = dataService.currentStreak;
 
     return Scaffold(
+      bottomNavigationBar: const BannerAdWidget(),
       body: SafeArea(
         child: Center(
           child: Padding(
@@ -58,7 +75,7 @@ class WorkoutCompleteScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Day $day done! You\'re one step closer\nto your glow up.',
+                  'Day ${widget.day} done! You\'re one step closer\nto your glow up.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: context.appTextSecondary,
@@ -131,27 +148,24 @@ class WorkoutCompleteScreen extends StatelessWidget {
           child: Icon(icon, color: color, size: 28),
         ),
         const SizedBox(height: 10),
-        Builder(
-          builder: (context) => Text(
-            value,
-            style: TextStyle(
-              color: context.appTextPrimary,
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-            ),
+        Text(
+          value,
+          style: TextStyle(
+            color: context.appTextPrimary,
+            fontSize: 22,
+            fontWeight: FontWeight.w800,
           ),
         ),
         const SizedBox(height: 2),
-        Builder(
-          builder: (context) => Text(
-            label,
-            style: TextStyle(
-              color: context.appTextSecondary,
-              fontSize: 13,
-            ),
+        Text(
+          label,
+          style: TextStyle(
+            color: context.appTextSecondary,
+            fontSize: 13,
           ),
         ),
       ],
     );
   }
 }
+

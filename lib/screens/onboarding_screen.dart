@@ -4,7 +4,7 @@ import 'package:lottie/lottie.dart';
 import '../config/theme.dart';
 import '../services/data_service.dart';
 import '../widgets/glow_button.dart';
-import 'personalization_setup_screen.dart';
+import 'auth_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -52,7 +52,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       Navigator.of(context).pushReplacement(
         PageRouteBuilder(
           pageBuilder: (context, animation, secondaryAnimation) =>
-              const PersonalizationSetupScreen(),
+              const AuthScreen(),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             return FadeTransition(opacity: animation, child: child);
           },

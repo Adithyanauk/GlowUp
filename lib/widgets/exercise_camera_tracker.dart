@@ -45,10 +45,8 @@ class _ExerciseCameraTrackerState extends State<ExerciseCameraTracker> {
       repCount: 0,
       isRepInProgress: false,
       previousState: 'idle',
-      statusText: 'Adjust posture',
-      isHoldExercise:
-          widget.exercise.name.toLowerCase() == 'plank' ||
-          widget.exercise.name.toLowerCase() == 'wall sit',
+      statusText: 'Get ready',
+      isHoldExercise: _repCounter.isHoldExercise,
       holdSeconds: 0,
     );
     _initializeCamera();
@@ -64,10 +62,8 @@ class _ExerciseCameraTrackerState extends State<ExerciseCameraTracker> {
         repCount: 0,
         isRepInProgress: false,
         previousState: 'idle',
-        statusText: 'Adjust posture',
-        isHoldExercise:
-            widget.exercise.name.toLowerCase() == 'plank' ||
-            widget.exercise.name.toLowerCase() == 'wall sit',
+        statusText: 'Get ready',
+        isHoldExercise: _repCounter.isHoldExercise,
         holdSeconds: 0,
       );
     }
@@ -93,7 +89,7 @@ class _ExerciseCameraTrackerState extends State<ExerciseCameraTracker> {
         }
       }
 
-      final selectedCamera = front ?? cameras.firstOrNull;
+      final selectedCamera = front ?? (cameras.isNotEmpty ? cameras.first : null);
       if (selectedCamera == null) {
         if (mounted) {
           setState(() {
@@ -146,17 +142,18 @@ class _ExerciseCameraTrackerState extends State<ExerciseCameraTracker> {
       return;
     }
 
+    // Process every 2nd frame for performance
     _frameCount += 1;
-    if (_frameCount % 3 != 0) {
+    if (_frameCount % 2 != 0) {
       return;
     }
-    
-    debugPrint("DEBUG: camera working");
 
     _isProcessing = true;
     try {
       final bytes = _joinPlanes(image.planes);
       final rotation = _controller?.description.sensorOrientation ?? 0;
+
+      final useFace = isFaceExercise(widget.exercise.name);
 
       final result = await _mediapipeBridge.processFrame(
         bytes: bytes,
@@ -164,11 +161,9 @@ class _ExerciseCameraTrackerState extends State<ExerciseCameraTracker> {
         height: image.height,
         rotation: rotation,
         exerciseName: widget.exercise.name,
-        useFaceMesh: widget.exercise.category == 'face',
-        usePose: widget.exercise.category != 'face',
+        useFaceMesh: useFace,
+        usePose: !useFace,
       );
-      
-      debugPrint("DEBUG: media pipe detection complete (Face pts: ${result.faceLandmarks.length}, Body pts: ${result.poseLandmarks.length})");
 
       if (!mounted) return;
 
@@ -228,50 +223,80 @@ class _ExerciseCameraTrackerState extends State<ExerciseCameraTracker> {
   @override
   Widget build(BuildContext context) {
     final snapshot = _latestSnapshot;
+    final hasGuidance = snapshot.guidanceHint != null;
 
     return Container(
       height: 380,
       width: double.infinity,
       decoration: BoxDecoration(
-        color: context.appCardColor,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withAlpha(180), width: 2.2),
+        color: Colors.black,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: AppColors.secondary.withAlpha(80),
+          width: 1.5,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withAlpha(30),
-            blurRadius: 14,
-            offset: const Offset(0, 6),
+            color: AppColors.secondary.withAlpha(20),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
       clipBehavior: Clip.antiAlias,
       child: Stack(
         children: [
+          // Camera preview
           Positioned.fill(
             child: _isInitializing
-                ? const Center(child: CircularProgressIndicator())
+                ? Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CircularProgressIndicator(
+                          color: AppColors.secondary,
+                          strokeWidth: 2.5,
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Starting camera...',
+                          style: TextStyle(
+                            color: Colors.white.withAlpha(150),
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
                 : _isCameraReady && _controller != null
                 ? (_isCameraOff
                       ? Center(
-                          child: Text(
-                            'Camera off',
-                            style: TextStyle(
-                              color: context.appTextSecondary,
-                              fontWeight: FontWeight.w600,
-                            ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.videocam_off_rounded,
+                                  color: Colors.white.withAlpha(100), size: 48),
+                              const SizedBox(height: 8),
+                              Text('Camera paused',
+                                  style: TextStyle(color: Colors.white.withAlpha(150), fontSize: 13)),
+                            ],
                           ),
                         )
                       : _buildMirroredPreview(_controller!))
                 : Center(
-                    child: Text(
-                      _cameraMessage,
-                      style: TextStyle(
-                        color: context.appTextSecondary,
-                        fontWeight: FontWeight.w600,
-                      ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.camera_alt_rounded,
+                            color: Colors.white.withAlpha(100), size: 48),
+                        const SizedBox(height: 8),
+                        Text(_cameraMessage,
+                            style: TextStyle(color: Colors.white.withAlpha(150), fontSize: 13)),
+                      ],
                     ),
                   ),
           ),
+          // Gradient overlays
           Positioned.fill(
             child: DecoratedBox(
               decoration: BoxDecoration(
@@ -279,61 +304,146 @@ class _ExerciseCameraTrackerState extends State<ExerciseCameraTracker> {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Colors.black.withAlpha(90),
+                    Colors.black.withAlpha(100),
                     Colors.transparent,
-                    Colors.black.withAlpha(120),
+                    Colors.transparent,
+                    Colors.black.withAlpha(140),
+                  ],
+                  stops: const [0, 0.2, 0.7, 1],
+                ),
+              ),
+            ),
+          ),
+          // Exercise name badge
+          Positioned(
+            top: 12,
+            left: 12,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.black.withAlpha(120),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: Colors.white.withAlpha(30)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    isFaceExercise(widget.exercise.name)
+                        ? Icons.face_rounded
+                        : Icons.fitness_center_rounded,
+                    color: AppColors.secondary,
+                    size: 14,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    widget.exercise.name,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          // Camera toggle
+          Positioned(
+            top: 12,
+            right: 12,
+            child: Material(
+              color: Colors.black.withAlpha(120),
+              borderRadius: BorderRadius.circular(14),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(14),
+                onTap: _toggleCameraPower,
+                child: Padding(
+                  padding: const EdgeInsets.all(10),
+                  child: Icon(
+                    _isCameraOff
+                        ? Icons.videocam_rounded
+                        : Icons.videocam_off_rounded,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          // Status & guidance at bottom
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.transparent,
+                    Colors.black.withAlpha(200),
                   ],
                 ),
               ),
-            ),
-          ),
-          Positioned(
-            top: 10,
-            left: 12,
-            child: Text(
-              widget.exercise.name,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w700,
-                fontSize: 14,
-              ),
-            ),
-          ),
-          Positioned(
-            top: 8,
-            right: 8,
-            child: Material(
-              color: Colors.black.withAlpha(90),
-              borderRadius: BorderRadius.circular(12),
-              child: IconButton(
-                onPressed: _toggleCameraPower,
-                icon: Icon(
-                  _isCameraOff
-                      ? Icons.videocam_rounded
-                      : Icons.videocam_off_rounded,
-                  color: Colors.white,
-                ),
-                tooltip: _isCameraOff ? 'Camera on' : 'Camera off',
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: 10,
-            left: 12,
-            right: 12,
-            child: Text(
-              snapshot.statusText,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-                fontSize: 12,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Status text
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: _getStatusColor(snapshot.statusText).withAlpha(40),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: _getStatusColor(snapshot.statusText).withAlpha(80),
+                      ),
+                    ),
+                    child: Text(
+                      snapshot.statusText,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: _getStatusColor(snapshot.statusText),
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                  // Camera guidance hint
+                  if (hasGuidance) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      snapshot.guidanceHint!,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: AppColors.warning,
+                        fontWeight: FontWeight.w500,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
           ),
         ],
       ),
     );
+  }
+
+  Color _getStatusColor(String status) {
+    if (status.contains('Good') || status.contains('Done') || status.contains('rep')) {
+      return AppColors.secondary;
+    }
+    if (status.contains('not visible') || status.contains('Move') || status.contains('Step')) {
+      return AppColors.warning;
+    }
+    if (status.contains('Calibrating')) {
+      return Colors.cyanAccent;
+    }
+    return Colors.white;
   }
 
   Widget _buildMirroredPreview(CameraController controller) {
@@ -352,8 +462,4 @@ class _ExerciseCameraTrackerState extends State<ExerciseCameraTracker> {
       ),
     );
   }
-}
-
-extension<T> on List<T> {
-  T? get firstOrNull => isEmpty ? null : first;
 }

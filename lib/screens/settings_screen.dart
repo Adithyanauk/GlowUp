@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../config/theme.dart';
 import '../main.dart';
 import '../services/data_service.dart';
+import '../services/auth_service.dart';
+import 'auth_screen.dart';
 import 'onboarding_screen.dart';
 import 'privacy_policy_screen.dart';
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
   // ── Constants ──
@@ -17,6 +20,11 @@ class SettingsScreen extends StatelessWidget {
       'https://play.google.com/store/apps/details?id=$_packageName';
   static const _feedbackEmail = 'support@glowupapp.com';
 
+  @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -77,6 +85,12 @@ class SettingsScreen extends StatelessWidget {
             ),
             const SizedBox(height: 32),
 
+            // ── Account ──
+            _sectionTitle('Account'),
+            const SizedBox(height: 14),
+            _buildAccountSection(context),
+            const SizedBox(height: 32),
+
             // ── Support Us ──
             _sectionTitle('Support us'),
             const SizedBox(height: 14),
@@ -129,7 +143,7 @@ class SettingsScreen extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.only(bottom: 30),
                 child: Text(
-                  'Version $_appVersion',
+                  'Version ${SettingsScreen._appVersion}',
                   style: TextStyle(
                     color: context.appTextHint,
                     fontSize: 13,
@@ -143,6 +157,7 @@ class SettingsScreen extends StatelessWidget {
       ),
     );
   }
+
 
   // ────────────────────────── Section Helpers ──────────────────────────
 
@@ -218,12 +233,104 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
+  // ────────────────────────── Account Section ──────────────────────────
+
+  Widget _buildAccountSection(BuildContext context) {
+    final authService = AuthService();
+    final isSignedIn = authService.isSignedIn;
+
+    if (isSignedIn) {
+      return _supportCard(context, [
+        // User info row
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 22,
+                backgroundColor: AppColors.primary.withAlpha(25),
+                child: Text(
+                  authService.displayName.isNotEmpty
+                      ? authService.displayName[0].toUpperCase()
+                      : '?',
+                  style: const TextStyle(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 18,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      authService.displayName.isNotEmpty
+                          ? authService.displayName
+                          : 'User',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    if (authService.email.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        authService.email,
+                        style: TextStyle(
+                          color: context.appTextSecondary,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const Icon(
+                Icons.verified_rounded,
+                color: AppColors.success,
+                size: 22,
+              ),
+            ],
+          ),
+        ),
+        _divider(context),
+        _supportTile(
+          context,
+          icon: Icons.logout_rounded,
+          label: 'Sign Out',
+          onTap: () => _confirmSignOut(context),
+        ),
+        _divider(context),
+        _supportTile(
+          context,
+          icon: Icons.person_remove_outlined,
+          label: 'Delete Account',
+          iconColor: AppColors.primary,
+          textColor: AppColors.primary,
+          onTap: () => _confirmDeleteAccount(context),
+        ),
+      ]);
+    } else {
+      return _supportCard(context, [
+        _supportTile(
+          context,
+          icon: Icons.login_rounded,
+          label: 'Sign In',
+          iconColor: AppColors.success,
+          onTap: () => _navigateToSignIn(context),
+        ),
+      ]);
+    }
+  }
+
   // ────────────────────────── Actions ──────────────────────────
 
   void _shareApp() {
     SharePlus.instance.share(
       ShareParams(
-        text: 'Check out GlowUp — 30 Day Glow Up Challenge!\n$_playStoreUrl',
+        text: 'Check out GlowUp — 30 Day Glow Up Challenge!\n${SettingsScreen._playStoreUrl}',
       ),
     );
   }
@@ -238,7 +345,7 @@ class SettingsScreen extends StatelessWidget {
   Future<void> _sendFeedback() async {
     final uri = Uri(
       scheme: 'mailto',
-      path: _feedbackEmail,
+      path: SettingsScreen._feedbackEmail,
       queryParameters: {
         'subject': 'GlowUp App Feedback',
       },
@@ -298,6 +405,151 @@ class SettingsScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  // ────────────────────────── Auth Actions ──────────────────────────
+
+  void _navigateToSignIn(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const AuthScreen()),
+    ).then((_) {
+      // Refresh UI after returning from auth screen
+      if (mounted) setState(() {});
+    });
+  }
+
+  void _confirmSignOut(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text(
+          'Sign Out?',
+          style: TextStyle(fontWeight: FontWeight.w700),
+        ),
+        content: const Text(
+          'You can sign back in anytime. Your local progress will be kept.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: context.appTextSecondary),
+            ),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.of(ctx).pop();
+              await AuthService().signOut();
+              await DataService().clearAuthState();
+              if (context.mounted && mounted) setState(() {});
+            },
+            child: const Text(
+              'Sign Out',
+              style: TextStyle(
+                color: AppColors.primary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmDeleteAccount(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: AppColors.primary, size: 28),
+            SizedBox(width: 10),
+            Text(
+              'Delete Account?',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
+          ],
+        ),
+        content: const Text(
+          'This will permanently delete your account and all associated data. '
+          'Your local progress will also be erased.\n\n'
+          'This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: context.appTextSecondary),
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              _executeDeleteAccount(context);
+            },
+            child: const Text(
+              'Delete Forever',
+              style: TextStyle(
+                color: AppColors.primary,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _executeDeleteAccount(BuildContext context) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(
+        child: CircularProgressIndicator(color: AppColors.primary),
+      ),
+    );
+
+    try {
+      await AuthService().deleteAccount();
+      await DataService().clearAllData();
+      if (context.mounted) {
+        Navigator.of(context).pop(); // dismiss loading
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const OnboardingScreen()),
+          (route) => false,
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      if (context.mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AuthService.friendlyError(e)),
+            backgroundColor: AppColors.primary,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            margin: const EdgeInsets.all(16),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Failed to delete account. Please try again.'),
+            backgroundColor: AppColors.primary,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            margin: const EdgeInsets.all(16),
+          ),
+        );
+      }
+    }
   }
 
   Widget _buildThemeOption(

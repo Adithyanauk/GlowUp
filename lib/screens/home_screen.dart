@@ -6,9 +6,7 @@ import '../services/data_service.dart';
 import '../widgets/progress_card.dart';
 import '../widgets/streak_card.dart';
 import '../widgets/calendar_view.dart';
-import '../widgets/exercise_tile.dart';
 import 'workout_screen.dart';
-import 'day_plan_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -28,7 +26,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final currentStreak = _dataService.currentStreak;
     final bestStreak = _dataService.bestStreak;
     final todayPlan = _dataService.getDayPlan(currentDay);
-    final todayExercises = _dataService.getExercisesForDay(currentDay);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
@@ -69,32 +66,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SizedBox(height: 24),
 
-                    // Today's Exercises
-                    Text(
-                      "Today's Exercises",
-                      style: TextStyle(
-                        color: context.appTextPrimary,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    ...todayExercises.map(
-                      (ex) => Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: ExerciseTile(
-                          name: ex.name,
-                          category: ex.category,
-                          duration: ex.duration,
-                          reps: ex.reps,
-                          difficulty: ex.difficulty,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // 30 Day Plan
-                    _buildPlanSection(),
+                    // Leaderboard
+                    _buildLeaderboard(),
                     const SizedBox(height: 30),
                   ],
                 ),
@@ -376,110 +349,216 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildPlanSection() {
+  Widget _buildLeaderboard() {
+    // Mock leaderboard data
+    final leaderboard = [
+      {'rank': 1, 'name': 'Alex R.', 'days': 28, 'streak': 28, 'avatar': '🏆'},
+      {'rank': 2, 'name': 'Priya K.', 'days': 25, 'streak': 22, 'avatar': '🥈'},
+      {'rank': 3, 'name': 'Marcus D.', 'days': 24, 'streak': 20, 'avatar': '🥉'},
+      {'rank': 4, 'name': 'Sofia L.', 'days': 21, 'streak': 18, 'avatar': '💪'},
+      {'rank': 5, 'name': 'You', 'days': _dataService.completedDays.length, 'streak': _dataService.currentStreak, 'avatar': '⭐'},
+      {'rank': 6, 'name': 'James T.', 'days': 15, 'streak': 10, 'avatar': '🔥'},
+      {'rank': 7, 'name': 'Aisha M.', 'days': 12, 'streak': 8, 'avatar': '✨'},
+      {'rank': 8, 'name': 'Liam W.', 'days': 10, 'streak': 6, 'avatar': '💫'},
+    ];
+
+    // Sort by days completed
+    leaderboard.sort((a, b) => (b['days'] as int).compareTo(a['days'] as int));
+    // Re-assign ranks after sort
+    for (int i = 0; i < leaderboard.length; i++) {
+      leaderboard[i]['rank'] = i + 1;
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
+            const Icon(Icons.leaderboard_rounded, color: AppColors.secondary, size: 22),
+            const SizedBox(width: 8),
             Text(
-              '30 Day Challenge',
+              'Leaderboard',
               style: TextStyle(
                 color: context.appTextPrimary,
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
               ),
             ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const DayPlanScreen()),
-                );
-              },
-              child: const Text(
-                'View All',
-                style: TextStyle(
-                  color: AppColors.secondary,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
           ],
         ),
-        const SizedBox(height: 8),
-        _buildPhaseCard(
-          'Phase 1: Light',
-          'Day 1–10',
-          Icons.spa_rounded,
-          AppColors.success,
-        ),
-        const SizedBox(height: 10),
-        _buildPhaseCard(
-          'Phase 2: Medium',
-          'Day 11–20',
-          Icons.fitness_center_rounded,
-          AppColors.warning,
-        ),
-        const SizedBox(height: 10),
-        _buildPhaseCard(
-          'Phase 3: Advanced',
-          'Day 21–30',
-          Icons.whatshot_rounded,
-          AppColors.primary,
+        const SizedBox(height: 14),
+        Container(
+          decoration: BoxDecoration(
+            color: context.appCardColor,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: context.appDivider),
+          ),
+          child: Column(
+            children: [
+              // Top 3 podium
+              Container(
+                padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.secondary.withAlpha(15),
+                      Colors.transparent,
+                    ],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    topRight: Radius.circular(20),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    _podiumItem(leaderboard[1], 60, AppColors.textSecondary),
+                    _podiumItem(leaderboard[0], 80, AppColors.secondary),
+                    _podiumItem(leaderboard[2], 50, AppColors.warning),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              // Rest of leaderboard
+              ...leaderboard.skip(3).map((entry) => _leaderboardRow(entry)),
+            ],
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildPhaseCard(
-    String title,
-    String subtitle,
-    IconData icon,
-    Color color,
-  ) {
+  Widget _podiumItem(Map<String, dynamic> entry, double height, Color color) {
+    final isYou = entry['name'] == 'You';
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          entry['avatar'] as String,
+          style: const TextStyle(fontSize: 28),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          entry['name'] as String,
+          style: TextStyle(
+            color: isYou ? AppColors.secondary : context.appTextPrimary,
+            fontSize: 13,
+            fontWeight: isYou ? FontWeight.w800 : FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Container(
+          width: 60,
+          height: height,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [color.withAlpha(60), color.withAlpha(25)],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(10),
+              topRight: Radius.circular(10),
+            ),
+            border: Border.all(color: color.withAlpha(50)),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                '#${entry['rank']}',
+                style: TextStyle(
+                  color: color,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              Text(
+                '${entry['days']}d',
+                style: TextStyle(
+                  color: context.appTextSecondary,
+                  fontSize: 11,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _leaderboardRow(Map<String, dynamic> entry) {
+    final isYou = entry['name'] == 'You';
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: context.appCardColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: context.appDivider),
+        color: isYou ? AppColors.secondary.withAlpha(10) : null,
+        border: Border(
+          bottom: BorderSide(color: context.appDivider, width: 0.5),
+        ),
       ),
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: color.withAlpha(30),
-              borderRadius: BorderRadius.circular(12),
+          SizedBox(
+            width: 28,
+            child: Text(
+              '#${entry['rank']}',
+              style: TextStyle(
+                color: context.appTextHint,
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+              ),
             ),
-            child: Icon(icon, color: color, size: 24),
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 10),
+          Text(
+            entry['avatar'] as String,
+            style: const TextStyle(fontSize: 20),
+          ),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  title,
+                  entry['name'] as String,
                   style: TextStyle(
-                    color: context.appTextPrimary,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
+                    color: isYou ? AppColors.secondary : context.appTextPrimary,
+                    fontSize: 14,
+                    fontWeight: isYou ? FontWeight.w800 : FontWeight.w600,
                   ),
                 ),
-                const SizedBox(height: 3),
                 Text(
-                  subtitle,
+                  '🔥 ${entry['streak']} streak',
                   style: TextStyle(
-                    color: context.appTextSecondary,
-                    fontSize: 13,
+                    color: context.appTextHint,
+                    fontSize: 11,
                   ),
                 ),
               ],
             ),
           ),
-          Icon(Icons.chevron_right_rounded, color: context.appTextHint),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: isYou
+                  ? AppColors.secondary.withAlpha(25)
+                  : context.appSurface,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              '${entry['days']} days',
+              style: TextStyle(
+                color: isYou ? AppColors.secondary : context.appTextSecondary,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
         ],
       ),
     );

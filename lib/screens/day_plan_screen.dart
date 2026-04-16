@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../config/theme.dart';
 import '../services/data_service.dart';
+import '../widgets/banner_ad_widget.dart';
 import 'workout_screen.dart';
 
 class DayPlanScreen extends StatelessWidget {
@@ -155,6 +156,8 @@ class DayPlanScreen extends StatelessWidget {
           );
         },
       ),
+      // Banner ad at the very bottom of the screen
+      bottomNavigationBar: const BannerAdWidget(),
     );
   }
 
