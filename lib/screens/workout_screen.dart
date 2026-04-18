@@ -7,6 +7,7 @@ import '../services/data_service.dart';
 import '../services/exercise_rep_counter.dart';
 import '../widgets/exercise_camera_tracker.dart';
 import '../services/voice_coach_service.dart';
+import '../widgets/banner_ad_widget.dart';
 import 'workout_complete_screen.dart';
 
 class WorkoutScreen extends StatefulWidget {
@@ -274,6 +275,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     final exercise = _exercises[_currentIndex];
     return Scaffold(
       backgroundColor: context.appBackground,
+      bottomNavigationBar: const BannerAdWidget(),
       appBar: AppBar(
         title: Text('Day ${widget.day}'),
         leading: IconButton(
